@@ -9,9 +9,13 @@ from django.core.cache import cache
 import json
 
 def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance_km=10):
+    """
+    verifies if the drivers are available and within the max distance(10km) are in cache
+    otherwise, it queries the database and caches the result for 5 mins
+    """
     cache_key = f"nearest_drivers:{vehicle_type_name}:{pickup_lat}:{pickup_lng}:{max_distance_km}"
     cached_drivers = cache.get(cache_key)
-    
+
     if cached_drivers:
         # Deserialize cached JSON data
         driver_ids = json.loads(cached_drivers)
