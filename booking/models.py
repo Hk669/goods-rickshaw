@@ -1,32 +1,32 @@
 from django.db import models
 from users.models import User
-from drivers.models import Driver
+from drivers.models import Driver, VehicleType
+from django.contrib.gis.db import models as gis_models
 
 class Booking(models.Model):
-    STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('en_route', 'En Route'),
-        ('picked_up', 'Picked Up'),
-        ('delivered', 'Delivered'),
-        ('canceled', 'Canceled'),
-    )
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
-    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, related_name='driver_bookings')
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ASSIGNED', 'Assigned'),
+        ('EN_ROUTE', 'En Route'),
+        ('PICKED_UP', 'Picked Up'),
+        ('DELIVERED', 'Delivered'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    driver = models.ForeignKey(Driver, on_delete=models.SET_NULL, null=True, blank=True)
+    vehicle_type = models.ForeignKey(VehicleType, on_delete=models.CASCADE)
     pickup_address = models.CharField(max_length=255)
     dropoff_address = models.CharField(max_length=255)
-    # pickup_location = gis_models.PointField(geography=True)
-    # dropoff_location = gis_models.PointField(geography=True)
-    pickup_latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
-    pickup_longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
-    dropoff_latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
-    dropoff_longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    estimated_price = models.DecimalField(max_digits=10, decimal_places=2)  # Automatically calculated
-    distance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # In kilometers
-    estimated_time = models.CharField(max_length=50, null=True, blank=True)  # Duration as string (e.g., "25 mins")
+    pickup_location = gis_models.PointField(geography=True)
+    dropoff_location = gis_models.PointField(geography=True)
+    distance_km = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    estimated_time_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Add other fields like payment details if necessary
 
     def __str__(self):
-        return f"Booking {self.id} - {self.status} by {self.customer.username}"
+        return f"Booking {self.id} by {self.user.username}"

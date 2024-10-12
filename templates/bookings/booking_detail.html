@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Details</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&libraries=places"></script>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>Booking Details</h2>
+    <p><strong>Pickup Address:</strong> {{ booking.pickup_address }}</p>
+    <p><strong>Drop-off Address:</strong> {{ booking.dropoff_address }}</p>
+    <p><strong>Vehicle Type:</strong> {{ booking.vehicle_type.name }}</p>
+    <p><strong>Distance:</strong> {{ booking.distance_km }} km</p>
+    <p><strong>Estimated Time:</strong> {{ booking.estimated_time_min }} minutes</p>
+    <p><strong>Price:</strong> ${{ booking.price }}</p>
+    <p><strong>Status:</strong> <span id="status">{{ booking.get_status_display }}</span></p>
+
+    {% if booking.driver %}
+        <p><strong>Assigned Driver:</strong> {{ booking.driver.user.username }}</p>
+    {% else %}
+        <p><strong>Assigned Driver:</strong> Not Assigned</p>
+    {% endif %}
+
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let pickupMarker;
+        let dropoffMarker;
+        let driverMarker;
+        let statusElement = document.getElementById('status');
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: {{ booking.pickup_location.y }}, lng: {{ booking.pickup_location.x }} },
+                zoom: 12
+            });
+
+            // Plot pickup location
+            pickupMarker = new google.maps.Marker({
+                position: { lat: {{ booking.pickup_location.y }}, lng: {{ booking.pickup_location.x }} },
+                map: map,
+                title: 'Pickup Location',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+            });
+
+            // Plot dropoff location
+            dropoffMarker = new google.maps.Marker({
+                position: { lat: {{ booking.dropoff_location.y }}, lng: {{ booking.dropoff_location.x }} },
+                map: map,
+                title: 'Drop-off Location',
+                icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            });
+
+            // Fit map to markers
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(pickupMarker.getPosition());
+            bounds.extend(dropoffMarker.getPosition());
+
+            if (driverMarker) {
+                bounds.extend(driverMarker.getPosition());
+            }
+
+            map.fitBounds(bounds);
+
+            // Initialize WebSocket connections if driver is assigned
+            {% if booking.driver %}
+                connectBookingStatusWebSocket({{ booking.id }});
+                connectTrackingWebSocket({{ booking.id }});
+            {% endif %}
+        }
+
+        function connectBookingStatusWebSocket(bookingId) {
+            const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/booking/${bookingId}/status/`);
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                statusElement.textContent = data.status.replace('_', ' ').toUpperCase();
+
+                if(data.status === 'EN_ROUTE') {
+                    // Optionally, implement additional logic
+                }
+
+                if(data.status === 'DELIVERED') {
+                    socket.close();
+                }
+            };
+
+            socket.onclose = function(e) {
+                console.error('BookingStatus WebSocket closed unexpectedly');
+            };
+        }
+
+        function connectTrackingWebSocket(bookingId) {
+            const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/booking/${bookingId}/tracking/`);
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                const { latitude, longitude } = data;
+
+                if (driverMarker) {
+                    driverMarker.setPosition({ lat: latitude, lng: longitude });
+                } else {
+                    driverMarker = new google.maps.Marker({
+                        position: { lat: latitude, lng: longitude },
+                        map: map,
+                        title: 'Driver Location',
+                        icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                    });
+                }
+
+                // Optionally, pan the map to the driver's location
+                // map.panTo({ lat: latitude, lng: longitude });
+            };
+
+            socket.onclose = function(e) {
+                console.error('Tracking WebSocket closed unexpectedly');
+            };
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>

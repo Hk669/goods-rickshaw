@@ -39,10 +39,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
 
-    # "django.contrib.gis",
+    "django.contrib.gis",
     "users",
     "drivers",
     "booking",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -80,23 +81,23 @@ ASGI_APPLICATION = 'logistics_platform.asgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # PostGIS database settings
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-#         'NAME': 'logistics_db',
-#         'USER': 'your_username',
-#         'PASSWORD': 'your_password',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
-
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "mydatabase",
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'logistics_db',
+        'USER': 'postgres',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": "mydatabase",
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -140,7 +141,7 @@ STATIC_URL = "static/"
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv('REDIS_URL'),
+        "LOCATION": "rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -152,7 +153,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.getenv('REDIS_URL'), )],
+            "hosts": [("rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379", )],
         },
     },
 }
