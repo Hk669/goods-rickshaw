@@ -10,6 +10,7 @@ class Booking(models.Model):
         ('EN_ROUTE', 'En Route'),
         ('PICKED_UP', 'Picked Up'),
         ('DELIVERED', 'Delivered'),
+        ('PAID', 'Paid'),
         ('CANCELLED', 'Cancelled'),
     ]
 
@@ -29,4 +30,4 @@ class Booking(models.Model):
     # Add other fields like payment details if necessary
 
     def __str__(self):
-        return f"Booking {self.id} by {self.user.username}"
+        return f"Booking {self.id} by {self.user.phone_number} ({self.status})"
