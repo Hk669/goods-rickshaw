@@ -9,10 +9,22 @@ class Driver(models.Model):
     license_plate = models.CharField(max_length=20)
     is_available = models.BooleanField(default=True)
     last_updated = models.DateTimeField(auto_now=True)
+    total_earnings = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    total_completed_bookings = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        indexes = [
+            gis_models.Index(fields=['current_location']),
+        ]
 
     def __str__(self):
-        return f"{self.user.username} - {self.vehicle_type.name}"
+        return f"{self.user.phone_number} - {self.vehicle_type.name}"
 
+    def update_earnings_and_bookings(self):
+        completed_bookings = self.booking_set.filter(status='DELIVERED')
+        self.total_completed_bookings = completed_bookings.count()
+        self.total_earnings = sum(booking.price for booking in completed_bookings)
+        self.save()
 
 class VehicleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
