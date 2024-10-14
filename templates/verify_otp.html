@@ -1,0 +1,20 @@
+<!-- templates/verify_otp.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify OTP</title>
+</head>
+<body>
+    <h2>Verify OTP</h2>
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        {% if driver_form %}
+            <h3>Driver Profile Details</h3>
+            {{ driver_form.as_p }}
+        {% endif %}
+        <button type="submit">Verify</button>
+    </form>
+</body>
+</html>

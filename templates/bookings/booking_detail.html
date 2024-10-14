@@ -1,5 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Booking Details{% endblock %}
+
+{% block content %}
 <head>
     <meta charset="UTF-8">
     <title>Booking Details</title>
@@ -28,14 +32,15 @@
     <p><strong>Vehicle Type:</strong> {{ booking.vehicle_type.name }}</p>
     <p><strong>Distance:</strong> {{ booking.distance_km }} km</p>
     <p><strong>Estimated Time:</strong> {{ booking.estimated_time_min }} minutes</p>
-    <p><strong>Price:</strong> ${{ booking.price }}</p>
+    <p><strong>Price:</strong> ₹{{ booking.price }}</p>
     <p><strong>Status:</strong> <span id="status">{{ booking.get_status_display }}</span></p>
 
     {% if booking.driver %}
-        <p><strong>Assigned Driver:</strong> {{ booking.driver.user.username }}</p>
+        <p><strong>Assigned Driver:</strong> {{ booking.driver.user.phone_number }}</p>
     {% else %}
         <p><strong>Assigned Driver:</strong> Not Assigned</p>
     {% endif %}
+    {% comment %} <p><strong>Driver Location:</strong> {{ booking.driver.current_location }}</p> {% endcomment %}
 
     <div id="map"></div>
 
@@ -68,6 +73,21 @@
                 icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
             });
 
+            // Plot driver location if assigned
+            {% if booking.driver %}
+                const driverLocation = "{{ booking.driver.current_location }}";
+                const cleanDriverLocation = driverLocation.replace('SRID=4326;POINT (', '').replace(')', '').split(' ');
+                const driverLng = parseFloat(cleanDriverLocation[0]);
+                const driverLat = parseFloat(cleanDriverLocation[1]);
+
+                driverMarker = new google.maps.Marker({
+                    position: { lat: driverLat, lng: driverLng },
+                    map: map,
+                    title: 'Driver Location',
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                });
+            {% endif %}
+
             // Fit map to markers
             const bounds = new google.maps.LatLngBounds();
             bounds.extend(pickupMarker.getPosition());
@@ -93,10 +113,6 @@
             socket.onmessage = function(e) {
                 const data = JSON.parse(e.data);
                 statusElement.textContent = data.status.replace('_', ' ').toUpperCase();
-
-                if(data.status === 'EN_ROUTE') {
-                    // Optionally, implement additional logic
-                }
 
                 if(data.status === 'DELIVERED') {
                     socket.close();
@@ -127,8 +143,7 @@
                     });
                 }
 
-                // Optionally, pan the map to the driver's location
-                // map.panTo({ lat: latitude, lng: longitude });
+                map.panTo({ lat: latitude, lng: longitude });
             };
 
             socket.onclose = function(e) {
@@ -139,4 +154,5 @@
         window.onload = initMap;
     </script>
 </body>
-</html>
+
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Check Bookings{% endblock %}
+
+{% block content %}
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #007BFF;
+            text-align: center;
+        }
+        .booking-list {
+            list-style: none;
+            padding: 0;
+        }
+        .booking-list li {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .booking-list li:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .booking-link {
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+        }
+        .booking-details {
+            font-size: 14px;
+            color: #555;
+        }
+        .no-bookings {
+            text-align: center;
+            font-style: italic;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bookings Overview</h1>
+        <p>Here are all the bookings:</p>
+        <ul class="booking-list">
+            {% for booking in bookings %}
+                <li>
+                    <a href="{% url 'booking_detail' booking.id %}" class="booking-link">
+                        Booking ID: {{ booking.id }}
+                    </a>
+                    <div class="booking-details">
+                        {% comment %} {{ booking.pickup_address }} to  {% endcomment %}
+                        {{ booking.dropoff_address }}
+                        <br>
+                        Status: {{ booking.get_status_display }}
+                        <br>
+                        ₹{{ booking.price }}
+                    </div>
+                </li>
+            {% empty %}
+                <li class="no-bookings">No bookings accepted yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+{% endblock %}

@@ -1,113 +1,174 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Driver Dashboard{% endblock %}
+
+{% block content %}
 <head>
     <meta charset="UTF-8">
     <title>Driver Dashboard</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&libraries=places"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        #map {
-            height: 500px;
-            width: 100%;
+        * {
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1200px; /* Optional: Set a max width */
+            width: 80%;
+            margin: auto;
+            overflow: hidden; /* Optional: Hide overflowing content */
+        }
+
+        .dashboard-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+            }
+            .chart-container {
+                height: 300px; /* Adjust for smaller screens */
+            }
+        }
+
     </style>
 </head>
 <body>
-    <h2>Driver Dashboard</h2>
-    <div id="map"></div>
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Driver Dashboard</h1>
+            <p><strong>Date:</strong> {{ current_date }}</p>
+        </div>
+
+        <div class="dashboard-card">
+            <h2>Summary</h2>
+            <p><strong>Total Earnings:</strong> ₹{{ total_earnings }}</p>
+            {% comment %} <p><strong>Total Bookings:</strong> {{ len(bookings) }}</p> {% endcomment %}
+            <p><strong>Completed Bookings:</strong> {{ total_completed_bookings }}</p>
+            <p><strong>Pending Bookings:</strong> {{ pending_bookings }}</p>
+            <p><strong>Cancelled Bookings:</strong> {{ cancelled_bookings }}</p>
+        </div>
+
+        <div class="dashboard-card chart-container">
+            <h2>Earnings Overview</h2>
+            <canvas id="earningsChart"></canvas>
+        </div>
+
+        <div class="dashboard-card chart-container">
+            <h2>Bookings Status Overview</h2>
+            <canvas id="bookingsChart"></canvas>
+        </div>
+
+        <div class="dashboard-card chart-container">
+            <h2>Monthly Performance</h2>
+            <canvas id="monthlyPerformanceChart"></canvas>
+        </div>
+    </div>
 
     <script>
-        let map, marker;
-
-        function initMap() {
-            // Initialize the map centered at a default location
-            map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 0, lng: 0 },
-                zoom: 15
-            });
-
-            marker = new google.maps.Marker({
-                position: { lat: 0, lng: 0 },
-                map: map,
-                title: 'Your Location',
-                icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            });
-
-            // Try HTML5 geolocation.
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    (position) => {
-                        const pos = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        };
-
-                        marker.setPosition(pos);
-                        map.setCenter(pos);
-
-                        // Send AJAX request to update location
-                        updateLocation(pos.lat, pos.lng);
-                    },
-                    () => {
-                        handleLocationError(true, marker, map.getCenter());
-                    },
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-                );
-            } else {
-                // Browser doesn't support Geolocation
-                handleLocationError(false, marker, map.getCenter());
-            }
-        }
-
-        function handleLocationError(browserHasGeolocation, marker, pos) {
-            marker.setPosition(pos);
-            alert(browserHasGeolocation ?
-                  'Error: The Geolocation service failed.' :
-                  'Error: Your browser doesn\'t support geolocation.');
-        }
-
-        function updateLocation(latitude, longitude) {
-            const csrfToken = getCookie('csrftoken');  // Implement getCookie function
-            fetch("{% url 'update_location' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
+        $(document).ready(function() {
+            // Earnings Chart
+            const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+            const earningsChart = new Chart(earningsCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ earnings_labels|safe }},
+                    datasets: [{
+                        label: 'Earnings (₹)',
+                        data: {{ earnings_data|safe }},
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true
+                    }]
                 },
-                body: JSON.stringify({
-                    latitude: latitude,
-                    longitude: longitude
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status !== 'success') {
-                    console.error('Location update failed:', data.message);
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-        }
-
-        // Utility function to get CSRF token from cookies
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
                     }
                 }
-            }
-            return cookieValue;
-        }
+            });
 
-        // Initialize map on window load
-        window.onload = initMap;
+            // Bookings Status Chart
+            const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
+            const bookingsChart = new Chart(bookingsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'Pending', 'Cancelled'],
+                    datasets: [{
+                        data: [{{ completed_bookings }}, {{ pending_bookings }}, {{ cancelled_bookings }}],
+                        backgroundColor: ['#4CAF50', '#FFC107', '#F44336'],
+                        hoverBackgroundColor: ['#45a049', '#FFB300', '#e53935']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+
+            // Monthly Performance Chart
+            const monthlyPerformanceCtx = document.getElementById('monthlyPerformanceChart').getContext('2d');
+            const monthlyPerformanceChart = new Chart(monthlyPerformanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ monthly_labels|safe }},
+                    datasets: [{
+                        label: 'Bookings',
+                        data: {{ monthly_bookings_data|safe }},
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        });
     </script>
 </body>
-</html>
+{% endblock %}

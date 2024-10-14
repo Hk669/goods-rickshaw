@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Current Booking{% endblock %}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <title>Driver Dashboard</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+        }
+        .booking {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        #map {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+        .distance-info {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Active Booking</h2>
+        {% for booking in bookings %}
+            {% if booking %}
+        <div class="booking">
+            <p><strong>Booking ID:</strong> {{ booking.id }}</p>
+            <p><strong>Pickup Address:</strong> {{ booking.pickup_location }}</p>
+            <p><strong>Dropoff Address:</strong> {{ booking.dropoff_location }}</p>
+            <p><strong>Price:</strong> ₹{{ booking.price }}</p>
+            <p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+            <form class="update-status-form" data-booking-id="{{ booking.id }}">
+                {% csrf_token %}
+                <select name="status">
+                    {% for code, display in booking.STATUS_CHOICES %}
+                        <option value="{{ code }}" {% if booking.status == code %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Update Status</button>
+            </form>
+            <button onclick="showRouteForBooking({{ booking.id }})">Show Route</button>
+            <div class="distance-info" id="distance-{{ booking.id }}" style="display:none;"></div>
+        </div>
+        {% endif %}
+        {% empty %}
+        <p>No active bookings.</p>
+        {% endfor %}
+        <div id="bookings-list"></div>
+        <div id="map"></div>
+    </div>
+
+    <script>
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let markers = [];
+        let socket;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: { lat: 0, lng: 0 },
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            const bookings = JSON.parse(document.getElementById('bookings-data').textContent);
+
+            if (bookings.length === 0) {
+                console.warn("No bookings available to display on the map.");
+                return;
+            }
+
+            const bounds = new google.maps.LatLngBounds();
+
+            bookings.forEach(booking => {
+                const pickup = new google.maps.LatLng(booking.pickup_location.y, booking.pickup_location.x);
+                const dropoff = new google.maps.LatLng(booking.dropoff_location.y, booking.dropoff_location.x);
+                
+                const pickupMarker = new google.maps.Marker({
+                    position: pickup,
+                    map: map,
+                    title: `Pickup for Booking #${booking.id}`,
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                });
+
+                const dropoffMarker = new google.maps.Marker({
+                    position: dropoff,
+                    map: map,
+                    title: `Dropoff for Booking #${booking.id}`,
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                });
+
+                markers.push(pickupMarker, dropoffMarker);
+                bounds.extend(pickup);
+                bounds.extend(dropoff);
+            });
+
+            // Adjust map bounds to fit all markers
+            map.fitBounds(bounds);
+            connectWebSocket();
+        }
+
+        function showRouteForBooking(bookingId) {
+            const bookings = JSON.parse(document.getElementById('bookings-data').textContent);
+            const booking = bookings.find(b => b.id === bookingId);
+
+            if (booking) {
+                const pickup = new google.maps.LatLng(booking.pickup_location.y, booking.pickup_location.x);
+                const dropoff = new google.maps.LatLng(booking.dropoff_location.y, booking.dropoff_location.x);
+
+                const request = {
+                    origin: pickup,
+                    destination: dropoff,
+                    travelMode: 'DRIVING'
+                };
+
+                directionsService.route(request, function(result, status) {
+                    if (status === 'OK') {
+                        directionsRenderer.setDirections(result);
+                        directionsRenderer.setPanel(document.getElementById('directions-panel')); // Optional directions panel
+                        const distance = result.routes[0].legs[0].distance.text;
+                        document.getElementById(`distance-${bookingId}`).textContent = `Distance: ${distance}`;
+                        document.getElementById(`distance-${bookingId}`).style.display = 'block';
+
+                        // Add car marker at pickup location
+                        const carMarker = new google.maps.Marker({
+                            position: pickup,
+                            map: map,
+                            icon: {
+                                url: "{% static 'admin/img/car.svg' %}",
+                                scaledSize: new google.maps.Size(50, 50)
+                            } // Use your car image path
+                        });
+
+                        markers.push(carMarker); // Keep track of car marker
+                    } else {
+                        console.error("Failed to find route:", status);
+                    }
+                });
+            } else {
+                console.error(`No booking found for ID ${bookingId}`);
+            }
+        }
+
+        function connectWebSocket() {
+            socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/bookings/`);
+
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log("Real-time update received:", data);
+
+                // Update marker position or status based on received data
+                const bookingId = data.bookingId;
+                const newLocation = data.location;
+
+                const bookingMarker = markers.find(marker => marker.title.includes(bookingId));
+
+                if (bookingMarker) {
+                    const updatedPosition = new google.maps.LatLng(newLocation.y, newLocation.x);
+                    bookingMarker.setPosition(updatedPosition);
+
+                    // Optional: Recalculate and show the route again
+                    showRouteForBooking(bookingId);
+                }
+            };
+
+            socket.onclose = function(event) {
+                console.log('WebSocket closed:', event);
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        $(document).ready(function() {
+            $('.update-status-form').on('submit', function(e) {
+                e.preventDefault();
+                const form = $(this);
+                const bookingId = form.data('booking-id');
+                const status = form.find('select[name="status"]').val();
+                const csrfToken = form.find('input[name="csrfmiddlewaretoken"]').val();
+
+                $.ajax({
+                    url: `/bookings/update-status/${bookingId}/`,
+                    type: 'POST',
+                    data: {
+                        'status': status,
+                        'csrfmiddlewaretoken': csrfToken
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alert('Booking status updated successfully.');
+                            form.find('select[name="status"]').val(status);
+                            if (status === 'PICKED_UP' || status === 'EN_ROUTE') {
+                                showRouteForBooking(bookingId);
+                            }
+                        } else {
+                            alert('Failed to update booking status: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.error(xhr.status + ": " + xhr.responseText);
+                        alert('An error occurred while updating the status.');
+                    }
+                });
+            });
+        });
+    </script>
+
+    <!-- JSON data for bookings -->
+    <script type="application/json" id="bookings-data">
+        {{ bookings_json|safe }}
+    </script>
+
+    <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&callback=initMap"
+    async
+    defer>
+    </script>
+
+</body>
+
+{% endblock %}

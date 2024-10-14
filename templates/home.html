@@ -1,4 +1,11 @@
 {% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
 {% block content %}
     <h1>Welcome to the Logistics Platform</h1>
+    <p>Logistics Platform is a platform that connects users with drivers for the transportation of goods.</p>
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+    
 {% endblock %}

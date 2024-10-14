@@ -3,18 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistics Platform</title>
+    <title>{% block title %}Logistics Platform{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <header>
         <nav>
             <a href="/">Home</a>
-            <a href="/bookings/create/">Create Booking</a>
-            <a href="/users/login/">Login</a>
+            
+            {% if user.is_authenticated %}
+                <!-- Show role-specific links based on user's role -->
+                {% if user.role == 'user' %}
+                    <a href="{% url 'create_booking' %}">Create Booking</a>
+                    <a href="{% url 'all_bookings' %}">My Bookings</a>
+                {% elif user.role == 'driver' %}
+                    <a href="{% url 'driver_dashboard' %}">Dashboard</a>
+                    <a href="{% url 'current_booking' %}">Current Booking</a>
+                {% endif %}
+
+                <!-- Common notifications link -->
+                {% comment %} <a href="{% url 'notifications' %}">Notifications</a> {% endcomment %}
+
+                <!-- Logout link -->
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <!-- If user is not authenticated, show login link -->
+                <a href="{% url 'login' %}">Login</a>
+            {% endif %}
         </nav>
     </header>
+    
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <footer>
+        <p>&copy; 2024 Logistics Platform. All rights reserved.</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>
