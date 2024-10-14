@@ -7,24 +7,24 @@ from django.contrib.gis.db.models.functions import Distance
 from drivers.models import Driver, VehicleType
 from django.core.cache import cache
 import json
+from django.db import transaction
+from dotenv import load_dotenv
+load_dotenv()
 
 def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance_km=10):
     """
-    verifies if the drivers are available and within the max distance(10km) are in cache
-    otherwise, it queries the database and caches the result for 5 mins
+    Finds available drivers within max_distance_km and caches the result for 5 minutes.
     """
     cache_key = f"nearest_drivers:{vehicle_type_name}:{pickup_lat}:{pickup_lng}:{max_distance_km}"
-    cached_drivers = cache.get(cache_key)
+    driver_ids = cache.get(cache_key)
 
-    if cached_drivers:
-        # Deserialize cached JSON data
-        driver_ids = json.loads(cached_drivers)
+    if driver_ids:
         return Driver.objects.filter(id__in=driver_ids)
-    
+
     try:
         vehicle_type = VehicleType.objects.get(name=vehicle_type_name)
     except VehicleType.DoesNotExist:
-        return []
+        return Driver.objects.none()
 
     pickup_location = Point(pickup_lng, pickup_lat, srid=4326)
 
@@ -35,8 +35,9 @@ def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance
     ).annotate(
         distance=Distance('current_location', pickup_location)
     ).order_by('distance')[:10]  # Limit to top 10 drivers
+
     driver_ids = list(drivers.values_list('id', flat=True))
-    cache.set(cache_key, json.dumps(driver_ids), timeout=300)  # Cache for 5 minutes
+    cache.set(cache_key, driver_ids, timeout=300)  # Cache for 5 minutes
 
     return drivers
 
@@ -46,7 +47,7 @@ def geocode_address(address):
     Geocode an address string to latitude and longitude using Google Geocoding API.
     Returns a dictionary with 'lat' and 'lng' or None if failed.
     """
-    api_key = "AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo"
+    api_key = os.getenv('MAPS_API_KEY')
     geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json'
 
     params = {
@@ -71,7 +72,7 @@ def calculate_estimated_price(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, 
     """
     Calculate estimated price based on distance and time using Google Distance Matrix API.
     """
-    api_key = "AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo"
+    api_key = os.getenv('MAPS_API_KEY')
     distance_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
     params = {
@@ -126,5 +127,23 @@ def get_surge_multiplier(pickup_lat, pickup_lng):
     Determine surge multiplier based on current demand vs. supply in the pickup area.
     Placeholder implementation; replace with actual logic.
     """
-    # Example: Static surge multiplier
     return Decimal('1.0')
+
+
+def assign_driver_to_booking(booking, drivers):
+    """
+    Assigns the first available driver to the booking within a transaction.
+    """
+    for driver in drivers:
+        with transaction.atomic():
+            # Refresh driver from the database to get the latest state
+            driver = Driver.objects.select_for_update().get(id=driver.id)
+            if driver.is_available:
+                driver.is_available = False
+                driver.save()
+                booking.driver = driver
+                booking.status = 'ASSIGNED'
+                booking.save()
+                # Optionally, notify the driver
+                return driver
+    return None
