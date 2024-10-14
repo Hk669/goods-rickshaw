@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
+import ssl
+from dotenv import load_dotenv
 from pathlib import Path
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +30,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CROSS_ORIGIN_ALLOW_ALL = True
 
 # Application definition
 
@@ -133,9 +137,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Adjust according to your directory structure
+]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # caches for booking
 CACHES = {
@@ -153,10 +159,15 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [("rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379", )],
+            "hosts": [
+                {
+                    "address": "rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379",
+                }
+            ],
         },
     },
 }
+
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -166,3 +177,25 @@ LOGOUT_REDIRECT_URL = 'home'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Twilio settings
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
+MAPS_API_KEY = os.getenv('MAPS_API_KEY')
+
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_NONE,  # Change to CERT_REQUIRED in production
+    # 'ca_certs': '/path/to/ca-certificates.crt',  # Optional: Specify CA certificates
+}
+
+CELERY_RESULT_BACKEND_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_NONE,  # Change to CERT_REQUIRED in production
+    # 'ca_certs': '/path/to/ca-certificates.crt',  # Optional: Specify CA certificates
+}
+CELERY_BROKER_URL = 'rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379/0'
+CELERY_RESULT_BACKEND = 'rediss://red-cs52uedumphs73amlasg:Xd25CVSp1POcWbRpMckFalE9MbOSvLT4@singapore-redis.render.com:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
