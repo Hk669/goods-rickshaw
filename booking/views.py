@@ -11,6 +11,10 @@ from django.http import JsonResponse
 from logistics_platform.services import send_booking_status_update, send_tracking_update
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from .tasks import assign_driver_task
+from .utils import notify_other_drivers, send_booking_cancellation_notification
 
 @login_required
 def create_booking(request):
@@ -74,48 +78,61 @@ def create_booking(request):
 
     return render(request, 'bookings/create_booking.html', {'form': form})
 
-# @shared_task
+
 def assign_driver_to_booking(booking_id):
+    assign_driver_task.delay(booking_id)
+
+
+@csrf_exempt  # Ensure to handle CSRF appropriately in production
+@login_required
+@require_POST
+def accept_booking(request, booking_id):
+    booking_id = booking_id
+    driver = request.user.driver  # Assuming the driver is linked to the user
+
     try:
-        booking = Booking.objects.select_related('vehicle_type').get(id=booking_id)
-        pickup_coords = {
-            'lat': booking.pickup_location.y,
-            'lng': booking.pickup_location.x
-        }
+        with transaction.atomic():
+            # Lock the booking row to prevent race conditions
+            booking = Booking.objects.select_for_update().get(id=booking_id)
 
-        # Find nearest available drivers
-        nearest_drivers = find_nearest_drivers(
-            pickup_lat=pickup_coords['lat'],
-            pickup_lng=pickup_coords['lng'],
-            vehicle_type_name=booking.vehicle_type.name
-        )
-        print(nearest_drivers)
-        if nearest_drivers.exists():
-            assigned_driver = nearest_drivers.first()
-            with transaction.atomic():
-                # Update booking with driver assignment
-                booking.driver = assigned_driver
-                booking.status = 'ASSIGNED'
-                booking.save()
+            if booking.status != 'PENDING':
+                return JsonResponse({'status': 'error', 'message': 'Booking already assigned.'})
 
-                # Update driver availability
-                assigned_driver.is_available = False
-                assigned_driver.save()
+            # Assign the booking to the driver
+            booking.driver = driver
+            booking.status = 'ASSIGNED'
+            booking.save()
 
-                # Optionally, notify the driver via email/SMS
-                # send_driver_notification.delay(assigned_driver.id, booking.id)
+            # Update driver availability
+            driver.is_available = False
+            driver.save()
 
-                # Notify user about driver assignment
-                send_booking_status_update(booking.id, 'ASSIGNED')
-                messages = f'Booking created and driver {assigned_driver.user.phone_number} assigned.'
-                print(messages)
-        else:
-            # No drivers available, booking remains pending
-            print('No available drivers nearby. Booking is pending.')
+            # Notify other drivers to cancel the booking
+            notify_other_drivers(booking_id, exclude_driver_id=driver.id)
+
+            # Notify the user via Channels
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'notifications_{booking.user.id}',
+                {
+                    'type': 'send_notification',
+                    'message': f'Your booking {booking.id} has been assigned to {driver.user.phone_number}.'
+                }
+            )
+
+            return JsonResponse({'status': 'success', 'message': 'Booking accepted.'})
     except Booking.DoesNotExist:
-        print(f"Booking with ID {booking_id} does not exist.")
+        return JsonResponse({'status': 'error', 'message': 'Booking does not exist.'}, status=404)
     except Exception as e:
-        print(f"Error assigning driver to booking {booking_id}: {e}")
+        print(f"Error accepting booking {booking_id}: {e}")
+        return JsonResponse({'status': 'error', 'message': 'An error occurred.'}, status=500)
+
+
+@login_required
+def accept_booking_redirect(request, booking_id):
+    # You can reuse the accept_booking logic or redirect to a form
+    response = accept_booking(request, booking_id)
+    return response
 
 
 @login_required
@@ -143,25 +160,55 @@ def update_booking_status(request, booking_id):
     booking.status = new_status
     booking.save()
 
-    # Optionally, notify via WebSocket
-    from channels.layers import get_channel_layer
-    from asgiref.sync import async_to_sync
+    # Send WebSocket update
     channel_layer = get_channel_layer()
-    group_name = f"booking_status_{booking.id}"
     async_to_sync(channel_layer.group_send)(
-        group_name,
+        f"booking_{booking.id}",
         {
-            'type': 'booking_status_update',
+            'type': 'status_update',
             'status': booking.get_status_display(),
         }
     )
 
     return JsonResponse({'status': 'success'})
 
+
 @login_required(login_url='login')
 def check_bookings(request):
     bookings = Booking.objects.filter(user=request.user).all() if request.user.role == 'user' else Booking.objects.filter(driver=request.user.driver).all()
     return render(request, 'bookings/check_bookings.html', {'bookings': bookings})
+
+
+# cancel the booking
+@login_required
+def cancel_booking(request, booking_id):
+    booking = get_object_or_404(Booking, id=booking_id)
+
+    # Optional: Add permission checks to ensure only authorized users can cancel
+    if request.user != booking.user and not request.user.is_staff:
+        messages.error(request, "You do not have permission to cancel this booking.")
+        return redirect('booking_detail', booking_id=booking.id)
+
+    if booking.status in ['CANCELLED', 'COMPLETED']:
+        messages.warning(request, "This booking cannot be cancelled.")
+        return redirect('booking_detail', booking_id=booking.id)
+
+    try:
+        with transaction.atomic():
+            booking.status = 'CANCELLED'
+            booking.save()
+
+            # Send cancellation notification to the driver if assigned
+            if booking.driver:
+                send_booking_cancellation_notification(booking.driver.id, booking.id)
+
+            messages.success(request, "Booking has been cancelled successfully.")
+    except Exception as e:
+        # Log the exception as needed
+        print(f"Error cancelling booking {booking.id}: {e}")
+        messages.error(request, "An error occurred while cancelling the booking.")
+
+    return redirect('booking_detail', booking_id=booking.id)
 
 # @login_required
 # def update_location(request):

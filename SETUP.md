@@ -23,3 +23,11 @@ python manage.py runserver
             CREATE EXTENSION postgis;
     ```
 - The above will setup the postgis extension in the `logistics_db`.
+
+## Run the application using daphne
+```py
+    daphne -u /tmp/daphne.sock -p 8001 logistics_platform.asgi:application
+    # for celery
+    celery -A logistics_platform worker --loglevel=info
+```
+
