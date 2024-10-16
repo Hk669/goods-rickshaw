@@ -35,6 +35,7 @@ CROSS_ORIGIN_ALLOW_ALL = True
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -78,7 +79,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "logistics_platform.wsgi.application"
+# WSGI_APPLICATION = "logistics_platform.wsgi.application"
 ASGI_APPLICATION = 'logistics_platform.asgi.application'
 
 # Database
@@ -168,6 +169,11 @@ CHANNEL_LAYERS = {
     },
 }
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels.layers.InMemoryChannelLayer"
+#     }
+# }
 
 AUTH_USER_MODEL = 'users.User'
 
