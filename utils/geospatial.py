@@ -11,7 +11,7 @@ from django.db import transaction
 from dotenv import load_dotenv
 load_dotenv()
 
-def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance_km=10):
+def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance_km=10, limit=5):
     """
     Finds available drivers within max_distance_km and caches the result for 5 minutes.
     """
@@ -19,6 +19,7 @@ def find_nearest_drivers(pickup_lat, pickup_lng, vehicle_type_name, max_distance
     driver_ids = cache.get(cache_key)
 
     if driver_ids:
+        print('Cache hit')
         return Driver.objects.filter(id__in=driver_ids)
 
     try:
