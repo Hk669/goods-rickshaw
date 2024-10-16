@@ -5,13 +5,14 @@ from django.contrib import messages
 from .forms import DriverLocationForm
 from .models import Driver
 from django.contrib.gis.geos import Point
-from booking.models import Booking
+from booking.models import Booking, Notification
 import json
 import logging
 from decimal import Decimal
 from django.views.decorators.csrf import csrf_exempt
 from drivers.utils import get_route_data, decimal_to_float
 from datetime import datetime
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,17 @@ def dashboard(request):
         'completed_bookings': total_completed_bookings,
     })
 
+@login_required
+def driver_dashboard(request):
+    if request.user.role != 'driver':
+        return redirect('home')
+    
+    driver = request.user.driver
+    # Fetch past notifications, ordered by latest
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:20]
+    
+    return render(request, 'drivers/driver_dashboard.html', {'notifications': notifications})
+
 
 @login_required
 def get_current_booking(request):
@@ -131,6 +143,7 @@ def get_current_booking(request):
             'bookings_json': bookings_json,
             'driver': driver,
         })
+    return render(request, 'drivers/current_booking.html', {'bookings': None, 'driver': driver})
 
 
 @login_required
@@ -152,3 +165,17 @@ def update_location(request):
             return JsonResponse({'status': 'error', 'message': 'Invalid data.'}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=400)
 
+
+def driver_location(request, driver_id):
+    # Fetch the cached location
+    location = cache.get(f'driver_{driver_id}_location')
+    if location:
+        latitude, longitude = location
+    else:
+        latitude, longitude = None, None  # Default if no data is available
+
+    return render(request, 'drivers/driver_location.html', {
+        'latitude': latitude,
+        'longitude': longitude,
+        'driver_id': driver_id
+    })

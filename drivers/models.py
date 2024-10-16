@@ -1,6 +1,8 @@
 from django.db import models
 from users.models import User
 from django.contrib.gis.db import models as gis_models
+# from kafka_utils.kafka_producer import send_location_update
+from django.contrib.gis.geos import Point
 
 class Driver(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -25,6 +27,12 @@ class Driver(models.Model):
         self.total_completed_bookings = completed_bookings.count()
         self.total_earnings = sum(booking.price for booking in completed_bookings)
         self.save()
+
+    def update_location(self, latitude, longitude):
+        self.current_location = Point(longitude, latitude)
+        self.save()
+        # send_location_update(self.id, latitude, longitude)
+
 
 class VehicleType(models.Model):
     name = models.CharField(max_length=100, unique=True)
