@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<head>
+    <title>Booking Cancelled</title>
+</head>
+<body>
+    <p>Dear {{ driver.user.phone_number }},</p>
+    <p>Your booking (ID: {{ booking.id }}) has been cancelled by the user.</p>
+    <p><strong>Pickup Address:</strong> {{ booking.pickup_address }}</p>
+    <p><strong>Dropoff Address:</strong> {{ booking.dropoff_address }}</p>
+    <p>If you have any questions, please contact support.</p>
+    <p>Thank you!</p>
+</body>
+
+{% endblock %}

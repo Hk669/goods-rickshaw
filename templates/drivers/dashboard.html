@@ -9,51 +9,107 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        /* static/css/driver_dashboard.css */
 
-        body {
-            font-family: Arial, sans-serif;
-        }
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
 
-        .container {
-            max-width: 1200px; /* Optional: Set a max width */
-            width: 80%;
-            margin: auto;
-            overflow: hidden; /* Optional: Hide overflowing content */
-        }
+body {
+    font-family: Arial, sans-serif;
+}
 
-        .dashboard-card {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+/* Container */
+.container {
+    max-width: 1200px; /* Optional: Set a max width */
+    width: 100%;
+    margin: auto;
+    padding: 20px;
+    overflow: hidden; /* Hide overflowing content */
+}
 
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+/* Dashboard Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
 
-        .chart-container {
-            width: 100%;
-            height: 400px;
-            margin: 20px 0;
-        }
+.dashboard-header h1 {
+    font-size: 2em;
+    color: #333;
+}
 
-        @media (max-width: 768px) {
-            .container {
-                width: 95%;
-            }
-            .chart-container {
-                height: 300px; /* Adjust for smaller screens */
-            }
-        }
+.dashboard-header p {
+    font-size: 1em;
+    color: #666;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card h2 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.5em;
+}
+
+/* Summary Section */
+.dashboard-card p {
+    margin-bottom: 10px;
+    color: #555;
+    font-size: 1em;
+}
+
+/* Chart Containers */
+.chart-container {
+    width: 100%;
+    height: 400px; /* Default height */
+    position: relative; /* For Chart.js to manage sizing */
+    margin: 20px 0;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+        padding: 10px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dashboard-header h1 {
+        margin-bottom: 10px;
+    }
+
+    .chart-container {
+        height: 300px; /* Adjust for smaller screens */
+    }
+
+    .dashboard-card {
+        padding: 15px;
+    }
+
+    .dashboard-card h2 {
+        font-size: 1.3em;
+    }
+
+    .dashboard-card p {
+        font-size: 0.9em;
+    }
+}
 
     </style>
 </head>
@@ -69,22 +125,22 @@
             <p><strong>Total Earnings:</strong> ₹{{ total_earnings }}</p>
             {% comment %} <p><strong>Total Bookings:</strong> {{ len(bookings) }}</p> {% endcomment %}
             <p><strong>Completed Bookings:</strong> {{ total_completed_bookings }}</p>
-            <p><strong>Pending Bookings:</strong> {{ pending_bookings }}</p>
+            {% comment %} <p><strong>Pending Bookings:</strong> {{ pending_bookings }}</p> {% endcomment %}
             <p><strong>Cancelled Bookings:</strong> {{ cancelled_bookings }}</p>
         </div>
 
         <div class="dashboard-card chart-container">
-            <h2>Earnings Overview</h2>
+            <h4>Earnings Overview</h4>
             <canvas id="earningsChart"></canvas>
         </div>
 
         <div class="dashboard-card chart-container">
-            <h2>Bookings Status Overview</h2>
+            <h4>Bookings Status Overview</h4>
             <canvas id="bookingsChart"></canvas>
         </div>
 
         <div class="dashboard-card chart-container">
-            <h2>Monthly Performance</h2>
+            <h4>Monthly Performance</h4>
             <canvas id="monthlyPerformanceChart"></canvas>
         </div>
     </div>

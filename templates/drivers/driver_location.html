@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Location</title>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Driver {{ driver_id }} Location</h1>
+    <div id="map"></div>
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&callback=initMap" async defer></script>
+    <script>
+        let map;
+let linePath;
+let marker;
+
+function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: { lat: 17.494464613199213, lng: 78.34791094571796 }, // Default starting center
+    });
+
+    // Initialize the polyline to show the path
+    linePath = new google.maps.Polyline({
+        path: [],
+        geodesic: true,
+        strokeColor: '#FF0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 4,
+        map: map,
+    });
+
+    // Initialize a marker to show the current location of the driver
+    marker = new google.maps.Marker({
+        position: { lat: 17.494464613199213, lng: 78.34791094571796 },
+        map: map,
+        title: "Driver Location",
+    });
+
+    // Fetch the driver_id from the template or backend
+    const driverId = "{{ driver_id }}";
+    const wsUrl = `ws://${window.location.host}/ws/location/${driverId}/`;
+    const socket = new WebSocket(wsUrl);
+
+    // Handle incoming WebSocket messages
+    socket.onmessage = function (event) {
+        console.log(event.data);
+        const data = JSON.parse(event.data);
+        const coordinates = data.features[0].geometry.coordinates.map(
+            coord => ({ lat: coord[1], lng: coord[0] })
+        );
+
+        // Update the polyline with new coordinates
+        linePath.setPath(coordinates);
+
+        // Update the marker position to the latest location
+        const latestLocation = coordinates[coordinates.length - 1];
+        marker.setPosition(latestLocation);
+
+        // Center the map on the latest location
+        map.setCenter(latestLocation);
+    };
+}
+    </script>
+</body>
+</html>

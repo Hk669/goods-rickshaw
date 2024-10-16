@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<head>
+    <title>Driver Dashboard</title>
+    <!-- Include any required CSS and JS libraries -->
+    <style>
+        /* Simple styles for notifications */
+        #notifications {
+            position: fixed;
+            top: 70px;
+            right: 30px;
+            width: 500px;
+            max-height: 500px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .notification {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #e1f5fe;
+            border: 1px solid #81d4fa;
+            border-radius: 3px;
+        }
+        .accept-button {
+            margin-top: 5px;
+            padding: 5px 10px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .accept-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Please wait for the nearest bookings, </h1>
+    <h1>Once we hear about it, we'll send a notification</h1>
+    
+    <!-- Notifications Panel -->
+    <div id="notifications">
+        <h3>Notifications</h3>
+        <div id="notification-list">
+            {% for notification in notifications %}
+                <div class="notification" data-booking-id="{{ notification.booking.id }}">
+                    {{ notification.message|safe }} - {{ notification.created_at|date:"Y-m-d H:i" }}
+                    <button class="accept-button" data-booking-id="{{ notification.booking.id }}">Accept</button>
+                </div>
+            {% empty %}
+                <div class="notification">No notifications yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Main Dashboard Content -->
+    <div id="dashboard-content">
+        <!-- Your existing dashboard content -->
+    </div>
+
+    <script>
+        const userId = {{ user.id }};
+        const notificationSocket = new WebSocket(
+            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/notifications/' + userId + '/'
+        );
+
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const message = data['message'];
+            const notificationList = document.getElementById('notification-list');
+            
+            // Parse the booking ID from the message or include it in a structured format
+            // For simplicity, assume booking ID is included in the message
+            // Alternatively, modify the send_booking_notification to include booking_id in the message payload
+
+            // Here, for demonstration, we'll assume booking ID is part of the message
+            // Ideally, use a structured data format like JSON
+            // Example message: "You have a new booking (ID: 123)."
+
+            // Extract booking ID using regex or a predefined format
+            const bookingIdMatch = message.match(/ID:\s*(\d+)/);
+            const bookingId = bookingIdMatch ? bookingIdMatch[1] : null;
+
+            if (bookingId) {
+                const acceptUrl = `/bookings/${bookingId}/accept/`;
+
+                // Create a new notification div
+                const newNotification = document.createElement('div');
+                newNotification.classList.add('notification');
+                newNotification.setAttribute('data-booking-id', bookingId);
+                newNotification.innerHTML = `${message} <button class="accept-button" data-booking-id="${bookingId}">Accept</button>`;
+                
+                // Prepend the new notification
+                notificationList.prepend(newNotification);
+            }
+        };
+
+        notificationSocket.onclose = function(e) {
+            console.error('Notification socket closed unexpectedly');
+        };
+
+        // Handle Accept Button Clicks
+        document.getElementById('notifications').addEventListener('click', function(e) {
+            if (e.target && e.target.matches('.accept-button')) {
+                const bookingId = e.target.getAttribute('data-booking-id');
+                if (bookingId) {
+                    fetch(`/bookings/${bookingId}/accept/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ booking_id: bookingId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert('Booking accepted successfully.');
+                            // Optionally, remove the notification from the list
+                            e.target.parentElement.remove();
+                        } else {
+                            alert(`Error: ${data.message}`);
+                            // Optionally, notify the driver that the booking was already accepted
+                            e.target.parentElement.remove();
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            }
+        });
+    </script>
+</body>
+
+{% endblock %}

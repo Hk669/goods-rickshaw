@@ -1,0 +1,16 @@
+<!-- templates/booking/notification_email.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Booking Assigned</title>
+</head>
+<body>
+    <p>Dear {{ driver.user.username }},</p>
+    <p>You have a new booking request (ID: {{ booking.id }}) from {{ booking.user.username }}.</p>
+    <p><strong>Pickup Address:</strong> {{ booking.pickup_address }}</p>
+    <p><strong>Drop-off Address:</strong> {{ booking.dropoff_address }}</p>
+    <p><strong>Vehicle Type:</strong> {{ booking.vehicle_type.name }}</p>
+    <p>Please log in to your dashboard to accept or reject this booking.</p>
+    <p>Thank you!</p>
+</body>
+</html>

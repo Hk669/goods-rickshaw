@@ -5,7 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Logistics Platform{% endblock %}</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+    <style>
+    /* static/css/style.css */
+
+/* Reset some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Navbar Styles */
+header {
+    background-color: #ffffff; /* White background */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    padding: 1rem 2rem;
+}
+
+nav a {
+    color: #000; /* Black text */
+    text-decoration: none;
+    margin-right: 1.5rem;
+    transition: color 0.3s ease, border-bottom 0.3s ease;
+    position: relative;
+}
+
+nav a:hover {
+    color: #007BFF; /* Change text color on hover */
+}
+
+nav a::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 2px;
+    background: #007BFF; /* Underline color */
+    transition: width 0.3s;
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+}
+
+nav a:hover::after {
+    width: 100%;
+}
+
+/* Main Content Styles */
+main {
+    flex: 1;
+    padding: 2rem;
+    background-color: #f9f9f9;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #f1f1f1; /* Light gray background */
+    text-align: center;
+    padding: 1rem 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    border-top: 1px solid #e0e0e0;
+}
+
+@media (max-width: 768px) {
+    nav {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    nav a {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+    </style>
 </head>
 <body>
     <header>
@@ -19,6 +108,7 @@
                     <a href="{% url 'all_bookings' %}">My Bookings</a>
                 {% elif user.role == 'driver' %}
                     <a href="{% url 'driver_dashboard' %}">Dashboard</a>
+                    <a href="{% url 'driver_stats' %}">My Stats</a>
                     <a href="{% url 'current_booking' %}">Current Booking</a>
                 {% endif %}
 

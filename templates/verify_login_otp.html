@@ -1,21 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Verify OTP</title>
-    <!-- Include your CSS here -->
-</head>
-<body>
-    <h2>Verify OTP</h2>
-    {% if messages %}
-        {% for message in messages %}
-            <div class="message {{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Verify OTP and Login</button>
-    </form>
-</body>
-</html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Verify OTP{% endblock %}
+
+{% block extra_styles %}
+<!-- Additional styles for authentication forms -->
+<link rel="stylesheet" href="{% static 'css/auth_forms.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>Verify OTP</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn">Verify OTP and Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
