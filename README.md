@@ -11,9 +11,7 @@ A scalable logistics platform for managing vehicle bookings, real-time tracking,
 - [Environment Variables](#environment-variables)
 - [Project Structure](#project-structure)
 - [API Endpoints](#api-endpoints)
-- [Testing](#testing)
 - [Deployment](#deployment)
-- [License](#license)
 
 ## Features
 
@@ -76,6 +74,18 @@ A scalable logistics platform for managing vehicle bookings, real-time tracking,
    ```
 
 6. Access the application at `http://127.0.0.1:8000`.
+
+### Docker Setup
+
+To run the application using Docker:
+
+1. Build and run the services:
+
+```sh
+   docker-compose up --build
+```
+
+2. Access the application at `http://localhost:8000`.
 
 ## Usage
 
@@ -163,17 +173,26 @@ goods-rickshaw/
 
 To deploy the application using Docker:
 
-1. Build the Docker image:
-   ```bash
-   docker build -t logistics-platform .
-   ```
+1. Build and run the Docker containers:
 
-2. Run the Docker container:
-   ```bash
-   docker run -p 8000:8000 logistics-platform
-   ```
+```sh
+   docker-compose up --build
+```
 
-3. Deploy to AWS Elastic Beanstalk:
-   - Create an Elastic Beanstalk application and environment.
-   - Deploy the Docker image to Elastic Beanstalk.
+2. Access the application at `http://localhost:8000`.
 
+### AWS Elastic Beanstalk Deployment
+
+1. Configure Elastic Beanstalk with the necessary environment variables:
+   `(SECRET_KEY, GOOGLE_MAPS_API_KEY, DATABASE_URL)`.
+
+2. Deploy the application using the eb CLI:
+```sh
+   eb init -p python-3.9 logistics-platform
+   eb create logistics-env
+   eb deploy
+```
+
+Ensure you have set up the necessary permissions and configurations in AWS before deploying.
+
+Thanks.
