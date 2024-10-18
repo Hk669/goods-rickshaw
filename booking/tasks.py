@@ -23,11 +23,11 @@ def assign_driver_task(booking_id):
             limit=10
         )
 
-        if nearest_drivers.exists():
+        if len(nearest_drivers) > 0:
             for driver in nearest_drivers:
                 send_booking_notification(driver.id, booking.id)
 
-            # booking.notification_sent_at = timezone.now()
+            print(f"Nearest drivers found for booking {booking_id}. Notifying drivers: {[driver.user.phone_number for driver in nearest_drivers]}.")
             booking.save()
         else:
             print('No available drivers nearby. Booking remains pending.')
