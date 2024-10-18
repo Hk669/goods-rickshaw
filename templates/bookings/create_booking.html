@@ -1,136 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block content %}
+{% load static %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Booking</title>
     <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&callback=initMap&libraries=places" async defer></script>
-    
-    <style>
-        /* Basic reset */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            line-height: 1.6;
-            padding: 20px;
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 2rem;
-            color: #007BFF;
-        }
-
-        form {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input[type="text"],
-        input[type="hidden"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            background-color: #f9f9f9;
-        }
-
-        #map {
-            height: 400px;
-            width: 100%;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #distance_info, #time_info {
-            font-weight: bold;
-            margin-top: 10px;
-            font-size: 1.1rem;
-            color: #007BFF;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            form {
-                padding: 15px;
-            }
-
-            h2 {
-                font-size: 1.8rem;
-            }
-
-            button {
-                font-size: 1rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/create_booking.css' %}">
 </head>
 <body>
-    <h2>Create a Booking</h2>
-    <form method="post" id="booking-form">
-        {% csrf_token %}
-        <div class="form-group">
-            {{ form.as_p }}
-        </div>
-        
-        <input type="hidden" name="pickup_latitude" id="pickup_latitude">
-        <input type="hidden" name="pickup_longitude" id="pickup_longitude">
-        <input type="hidden" name="dropoff_latitude" id="dropoff_latitude">
-        <input type="hidden" name="dropoff_longitude" id="dropoff_longitude">
+    <div class="booking-container">
+    <div class="booking-card">
+        <h2>Create a Booking</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <form method="post" id="booking-form">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.as_p }}
+            </div>
+            
+            <!-- Hidden Inputs for Coordinates -->
+            <input type="hidden" name="pickup_latitude" id="pickup_latitude">
+            <input type="hidden" name="pickup_longitude" id="pickup_longitude">
+            <input type="hidden" name="dropoff_latitude" id="dropoff_latitude">
+            <input type="hidden" name="dropoff_longitude" id="dropoff_longitude">
 
-        <div id="map"></div>
+            <!-- Google Map -->
+            <div id="map"></div>
 
-        <div id="distance_info"></div>
-        <div id="time_info"></div>
+            <!-- Distance and Time Information -->
+            <div id="distance_info"></div>
+            <div id="time_info"></div>
 
-        <input type="hidden" name="distance" id="distance">
-        <input type="hidden" name="estimated_time" id="estimated_time">
+            <!-- Hidden Inputs for Distance and Estimated Time -->
+            <input type="hidden" name="distance" id="distance">
+            <input type="hidden" name="estimated_time" id="estimated_time">
 
-        <button type="submit">Create Booking</button>
-    </form>
+            <!-- Submit Button -->
+            <button type="submit" class="btn">Create Booking</button>
+        </form>
+    </div>
+</div>
 
     <script>
         let map, userMarker, dropoffMarker, autocompletePickup, autocompleteDropoff;
@@ -259,4 +173,4 @@
         }
     </script>
 </body>
-</html>
+{% endblock %}

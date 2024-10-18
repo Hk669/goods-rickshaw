@@ -1,39 +1,155 @@
-<!-- templates/bookings/booking_detail.html -->
 {% extends "base.html" %}
+{% load static %}
 
+{% block title %}Booking Details{% endblock %}
 {% block content %}
-  <h2>Booking Details</h2>
-  <p><strong>Pickup Address:</strong> {{ booking.pickup_address }}</p>
-  <p><strong>Drop-off Address:</strong> {{ booking.dropoff_address }}</p>
-  <p><strong>Vehicle Type:</strong> {{ booking.vehicle_type.name }}</p>
-  <p><strong>Price:</strong> ${{ booking.price }}</p>
-  <p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+<!-- Link to the external CSS file for Booking Detail page -->
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG3yJWxO2VrtILP7Y_6y9SAOg0Sd9bUHo&callback=initMap&libraries=places" async defer></script>
+<link rel="stylesheet" href="{% static 'css/booking_detail.css' %}">
+<style>
+    /* Ensure the map has a defined height */
+    #map {
+        width: 100%;
+        height: 400px; /* Adjust height as needed */
+        margin-top: 20px;
+    }
 
-  {% if user.role == 'driver' and booking.status == 'PENDING' %}
-    <button id="accept-booking" data-booking-id="{{ booking.id }}">Accept Booking</button>
-  {% endif %}
+    .booking-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        margin-top: 20px;
+    }
 
-  <script>
-    document.getElementById('accept-booking').addEventListener('click', function() {
-        const bookingId = this.dataset.bookingId;
-        fetch("{% url 'accept_booking' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: `booking_id=${bookingId}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === 'success') {
-                alert('Booking accepted successfully.');
-                // Optionally, redirect or update the UI
-            } else {
-                alert(`Error: ${data.message}`);
-            }
-        })
-        .catch(error => console.error('Error:', error));
+    .booking-card {
+        width: 90%;
+        max-width: 800px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+
+    .booking-info p {
+        font-size: 1.1em;
+        margin: 10px 0;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        font-size: 1.1em;
+        color: #fff;
+        background-color: #007BFF;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background-color: #0056b3;
+    }
+</style>
+
+<div class="booking-container">
+    <div class="booking-card">
+        <h2>Booking Details</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <div class="booking-info">
+            <p><strong>Pickup Address:</strong> {{ booking.pickup_address }}</p>
+            <p><strong>Drop-off Address:</strong> {{ booking.dropoff_address }}</p>
+            <p><strong>Vehicle Type:</strong> {{ booking.vehicle_type.name }}</p>
+            <p><strong>Price:</strong> ₹{{ booking.price }}</p>
+            <p><strong>Status:</strong> {{ booking.get_status_display }}</p>
+        </div>
+
+        <!-- Google Map to display Pickup and Drop-off Locations -->
+        <div id="map"></div>
+
+        {% if user.role == 'driver' and booking.status == 'PENDING' %}
+            <button id="accept-booking" data-booking-id="{{ booking.id }}" class="btn">Accept Booking</button>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Initialize and add the map
+    function initMap() {
+        // Coordinates for Pickup and Drop-off
+        const pickupLocation = { lat: {{ booking.pickup_latitude }}, lng: {{ booking.pickup_longitude }} };
+        const dropoffLocation = { lat: {{ booking.dropoff_latitude }}, lng: {{ booking.dropoff_longitude }} };
+
+        // Map centered between Pickup and Drop-off
+        const mapCenter = {
+            lat: (pickupLocation.lat + dropoffLocation.lat) / 2,
+            lng: (pickupLocation.lng + dropoffLocation.lng) / 2
+        };
+
+        const map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 10,
+            center: mapCenter
+        });
+
+        // Marker for Pickup Location
+        const pickupMarker = new google.maps.Marker({
+            position: pickupLocation,
+            map: map,
+            title: 'Pickup Location',
+            icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        });
+
+        // Marker for Drop-off Location
+        const dropoffMarker = new google.maps.Marker({
+            position: dropoffLocation,
+            map: map,
+            title: 'Drop-off Location',
+            icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        });
+
+        // Optional: Draw a line between Pickup and Drop-off
+        const routePath = new google.maps.Polyline({
+            path: [pickupLocation, dropoffLocation],
+            geodesic: true,
+            strokeColor: '#007BFF',
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+        });
+
+        routePath.setMap(map);
+    }
+
+    // Event Listener for Accept Booking Button
+    document.addEventListener('DOMContentLoaded', function() {
+        const acceptButton = document.getElementById('accept-booking');
+        if (acceptButton) {
+            acceptButton.addEventListener('click', function() {
+                const bookingId = this.dataset.bookingId;
+                fetch("{% url 'accept_booking' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: `booking_id=${bookingId}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        alert('Booking accepted successfully.');
+                        window.location.reload();
+                    } else {
+                        alert(`Error: ${data.message}`);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
     });
-  </script>
+</script>
 {% endblock %}

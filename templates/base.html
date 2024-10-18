@@ -117,6 +117,7 @@ footer {
 
                 <!-- Logout link -->
                 <a href="{% url 'logout' %}">Logout</a>
+                <p>Number: {{ request.user.phone_number }}</p>
             {% else %}
                 <!-- If user is not authenticated, show login link -->
                 <a href="{% url 'login' %}">Login</a>
@@ -131,7 +132,5 @@ footer {
     <footer>
         <p>&copy; 2024 Logistics Platform. All rights reserved.</p>
     </footer>
-
-    {% block scripts %}{% endblock %}
 </body>
 </html>
