@@ -18,3 +18,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the project files into the container
 COPY . /logistics_platform/
+
+RUN python manage.py runserver 0.0.0.0:8000
